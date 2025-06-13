@@ -1,4 +1,4 @@
-﻿namespace LetheApi.DTOs;
+﻿namespace LetheApi.DTOs.AuthDtos;
 
 public class LoginDto
 {
