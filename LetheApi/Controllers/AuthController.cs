@@ -1,5 +1,6 @@
-﻿using LetheApi.Data;
-using LetheApi.DTOs;
+﻿using LetheApi.DTOs.AuthDtos;
+using LetheApi.Models;
+using LetheApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -10,12 +11,12 @@ namespace LetheApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AppDbContext context, IConfiguration configuration) : ControllerBase
+public class AuthController(IGenericRepository<User> userRepository, IConfiguration configuration) : ControllerBase
 {
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginDto dto)
+    public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
-        var user = context.Users.FirstOrDefault(u => u.Username == dto.Username);
+        User? user = await userRepository.GetByAsync(u => u.Username == dto.Username);
         if (user == null || user.PasswordHash != dto.Password) return Unauthorized();
 
         var claims = new[]
@@ -24,10 +25,10 @@ public class AuthController(AppDbContext context, IConfiguration configuration) 
             new Claim(ClaimTypes.Role, user.Role)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
+        SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha256);
 
-        var token = new JwtSecurityToken(
+        JwtSecurityToken token = new(
             issuer: configuration["Jwt:Issuer"],
             audience: configuration["Jwt:Audience"],
             claims: claims,
